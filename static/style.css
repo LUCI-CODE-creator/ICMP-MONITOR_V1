@@ -1,0 +1,33 @@
+/* General card styling for consistency */
+.card {
+    transition: all 0.3s ease;
+    border-radius: 10px;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Status badges for individual items (if used, currently dashboard uses different styling) */
+.status-badge {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.status-up {
+    background-color: #28a745;
+}
+
+.status-down {
+    background-color: #dc3545;
+}
+
+/* Specific styles for pre tags in add_multiple.html */
+pre {
+    border-radius: 5px;
+    border-left: 4px solid hsl(332, 98%, 52%);
+}

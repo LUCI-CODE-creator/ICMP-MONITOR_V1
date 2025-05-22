@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Telegram Settings{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4>⚙️ Telegram Notification Settings</h4>
+        </div>
+        <div class="card-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="bot_token" class="form-label">Bot Token</label>
+                    <input type="text" class="form-control" id="bot_token" name="bot_token" value="{{ bot_token }}" required>
+                    <small class="form-text text-muted">Example: 123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11</small>
+                </div>
+                <div class="mb-3">
+                    <label for="chat_id" class="form-label">Chat ID</label>
+                    <input type="text" class="form-control" id="chat_id" name="chat_id" value="{{ chat_id }}" required>
+                    <small class="form-text text-muted">Example: -1001234567890 (for group chats, often starts with -100)</small>
+                </div>
+
+                <div class="d-flex justify-content-between mb-4">
+                    <button type="submit" name="action" value="save_config" class="btn btn-primary">Save Configuration</button>
+                    <button type="submit" name="action" value="test_connection" class="btn btn-info">Test Connection</button>
+                </div>
+            </form>
+
+            <hr>
+
+            <h5>Send Custom Telegram Message</h5>
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="custom_message" class="form-label">Message</label>
+                    <textarea class="form-control" id="custom_message" name="custom_message" rows="3" required></textarea>
+                </div>
+                <button type="submit" name="action" value="send_custom_message" class="btn btn-success">Send Message</button>
+            </form>
+
+            {% if test_result %}
+            <div class="alert alert-{% if test_result.success %}success{% else %}danger{% endif %} mt-3">
+                {{ test_result.message }}
+            </div>
+            {% endif %}
+
+            <div class="mt-4 text-start small text-muted">
+                <p><strong>How to get these details:</strong></p>
+                <ol>
+                    <li>Talk to <a href="https://t.me/BotFather" target="_blank">@BotFather</a> on Telegram to create a bot</li>
+                    <li>Get your bot token from @BotFather</li>
+                    <li>Add your bot to a group and send a message</li>
+                    <li>Visit: <code>https://api.telegram.org/botYOUR_TOKEN/getUpdates</code></li>
+                    <li>Find the "chat" object and copy the "id" value. If it's a group, the ID will typically start with `-100`.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

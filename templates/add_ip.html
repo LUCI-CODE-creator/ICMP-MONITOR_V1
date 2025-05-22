@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Add IP{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4>➕ Add New IP Address</h4>
+        </div>
+        <div class="card-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="ip" class="form-label">IP Address</label>
+                    <input type="text" class="form-control" id="ip" name="ip" required placeholder="e.g., 8.8.8.8 or 192.168.1.1">
+                </div>
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <input type="text" class="form-control" id="description" name="description" required placeholder="e.g., Google DNS, Office Router">
+                </div>
+                <button type="submit" class="btn btn-primary">Add IP</button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

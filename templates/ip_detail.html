@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}{{ ip.description }} - IP Detail{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0">{{ ip.description }} ({{ ip.ip }}) Details</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>Current Status:</strong>
+                {% if ip.last_status == 1 %}
+                    <span class="badge bg-success">ONLINE</span>
+                {% elif ip.last_status == 0 %}
+                    <span class="badge bg-danger">OFFLINE</span>
+                {% else %}
+                    <span class="badge bg-secondary">UNKNOWN</span>
+                {% endif %}
+            </p>
+            <p><strong>Last Checked:</strong> {{ ip.last_checked | default('Never', true) }}</p>
+            <p><strong>Response Time:</strong> {{ "%.2f ms" % ip.response_time if ip.response_time is not none else '--' }}</p>
+            <p><strong>Monitoring Active:</strong>
+                {% if ip.active %}
+                    <span class="badge bg-success">Yes</span>
+                {% else %}
+                    <span class="badge bg-warning">No</span>
+                {% endif %}
+            </p>
+
+            <hr>
+
+            <h5>Response Time History (Last 24 Hours)</h5>
+            <canvas id="responseTimeChart"></canvas>
+
+            <h5 class="mt-4">Uptime Percentage (Last 24 Hours)</h5>
+            <canvas id="uptimeChart"></canvas>
+
+            <h5 class="mt-4">Recent Ping Logs</h5>
+            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Status</th>
+                            <th>Response Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in history | reverse %}
+                        <tr>
+                            <td>{{ log.timestamp }}</td>
+                            <td>
+                                {% if log.status == 1 %}
+                                    <span class="badge bg-success">UP</span>
+                                {% else %}
+                                    <span class="badge bg-danger">DOWN</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ "%.2f ms" % log.response_time if log.response_time is not none else '--' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3">No historical data available for the last 24 hours.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const historyData = {{ history | tojson }};
+
+        const labels = historyData.map(item => new Date(item.timestamp).toLocaleString());
+        const responseTimes = historyData.map(item => item.response_time);
+        const statuses = historyData.map(item => item.status);
+
+        // Response Time Chart
+        const rtCtx = document.getElementById('responseTimeChart').getContext('2d');
+        new Chart(rtCtx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Response Time (ms)',
+                    data: responseTimes,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 1,
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Response Time (ms)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            }
+        });
+
+        // Uptime Percentage Chart
+        let upCount = 0;
+        let totalCount = 0;
+        statuses.forEach(status => {
+            totalCount++;
+            if (status === 1) {
+                upCount++;
+            }
+        });
+
+        const uptimePercentage = totalCount > 0 ? (upCount / totalCount) * 100 : 0;
+
+        const uptimeCtx = document.getElementById('uptimeChart').getContext('2d');
+        new Chart(uptimeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Online', 'Offline'],
+                datasets: [{
+                    data: [uptimePercentage.toFixed(2), (100 - uptimePercentage).toFixed(2)],
+                    backgroundColor: ['#28a745', '#dc3545'],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.raw + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

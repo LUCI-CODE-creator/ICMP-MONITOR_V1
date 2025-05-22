@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Add Multiple IPs{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4>➕ Add Multiple IPs</h4>
+        </div>
+        <div class="card-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Enter IPs (one per line):</label>
+                    <textarea class="form-control" name="ip_list" rows="10"
+                              placeholder="Format 1: 192.168.1.1&#10;Format 2: 192.168.1.1|Office Router">{{ ip_list | default('') }}</textarea>
+                    <small class="form-text text-muted">Invalid IP formats will be skipped.</small>
+                </div>
+                <button type="submit" class="btn btn-primary">Add All IPs</button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+            </form>
+
+            {% if added_ips %}
+            <div class="alert alert-success mt-3">
+                <h5>✅ Successfully Added:</h5>
+                <ul>
+                    {% for ip in added_ips %}
+                    <li>{{ ip }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if errors %}
+            <div class="alert alert-danger mt-3">
+                <h5>❌ Errors:</h5>
+                <ul>
+                    {% for error in errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mt-4 shadow">
+        <div class="card-header bg-info text-white">
+            <h5>📝 Bulk IP Format Examples</h5>
+        </div>
+        <div class="card-body">
+            <h6>Option 1: IP Only (Auto-generated description)</h6>
+            <pre class="bg-light p-3">8.8.8.8
+1.1.1.1
+192.168.1.1</pre>
+
+            <h6 class="mt-3">Option 2: IP with Custom Description</h6>
+            <pre class="bg-light p-3">8.8.8.8|Google DNS
+1.1.1.1|Cloudflare DNS
+192.168.1.1|Office Router</pre>
+        </div>
+    </div>
+</div>
+
+<style>
+    pre {
+        border-radius: 5px;
+        border-left: 4px solid #0d6efd;
+    }
+    .card {
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}

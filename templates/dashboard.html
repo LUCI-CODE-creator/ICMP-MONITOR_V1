@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Monitor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --online-color: #28a745;
+            --offline-color: #dc3545;
+            --primary-color: #4e73df;
+        }
+        body {
+            background-image: url('https://www.transparenttextures.com/patterns/connected-world.png'); /* Example pattern */
+            /* Or use your local image: url('{{ url_for('static', filename='network_bg.jpg') }}'); */
+            background-repeat: repeat;
+            background-size: auto;
+            padding-bottom: 60px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            flex: 1;
+        }
+        .status-card {
+            border-radius: 10px;
+            transition: all 0.3s;
+            border: 3px solid transparent;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            color: white;
+            cursor: pointer;
+        }
+        .status-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+        }
+        .status-card.selected-filter {
+            border-color: white !important;
+        }
+        .card-online {
+            background: linear-gradient(135deg, var(--online-color), #5cb85c);
+        }
+        .card-offline {
+            background: linear-gradient(135deg, var(--offline-color), #d9534f);
+        }
+        .card-total {
+            background: linear-gradient(135deg, var(--primary-color), #6f42c1);
+        }
+        .floating-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ff6b6b, #f06595);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        .floating-btn:hover {
+            transform: scale(1.1) translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            color: white;
+        }
+        .floating-btn-secondary {
+            right: 100px;
+            background: linear-gradient(135deg, #4dabf7, #339af0);
+        }
+        .table-responsive {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        .badge-online {
+            background-color: rgba(40, 167, 69, 0.2);
+            color: var(--online-color);
+        }
+        .badge-offline {
+            background-color: rgba(220, 53, 69, 0.2);
+            color: var(--offline-color);
+        }
+        .last-checked {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="text-primary">
+                <i class="bi bi-speedometer2"></i> Network Monitor
+            </h1>
+            <div>
+                <span class="badge bg-light text-dark">
+                    <i class="bi bi-arrow-repeat"></i> Auto-refresh: 5s
+                </span>
+            </div>
+        </div>
+
+        <div class="row mb-4 g-4">
+            <div class="col-md-4">
+                <div class="card status-card card-online h-100" id="filter-online">
+                    <div class="card-body text-center py-4">
+                        <h1 class="display-3 fw-bold" id="up-count">0</h1>
+                        <p class="card-text fs-4">
+                            <i class="bi bi-check-circle"></i> Systems Online
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card status-card card-offline h-100" id="filter-offline">
+                    <div class="card-body text-center py-4">
+                        <h1 class="display-3 fw-bold" id="down-count">0</h1>
+                        <p class="card-text fs-4">
+                            <i class="bi bi-x-circle"></i> Systems Offline
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card status-card card-total h-100" id="filter-all">
+                    <div class="card-body text-center py-4">
+                        <h1 class="display-3 fw-bold" id="total-count">0</h1>
+                        <p class="card-text fs-4">
+                            <i class="bi bi-collection"></i> Total Monitored
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list-ul"></i> Monitored Systems
+                    </h5>
+                    <div class="d-flex align-items-center">
+                        <input type="text" id="ipSearch" class="form-control form-control-sm me-2" placeholder="Search IP or Description">
+                        <small class="text-white">
+                            Last update: <span id="last-update"></span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="ips-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>IP Address</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th>Response</th>
+                                <th>Last Checked</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="/add" class="floating-btn" title="Add New IP">
+        <i class="bi bi-plus-lg"></i>
+    </a>
+    <a href="/add_multiple" class="floating-btn floating-btn-secondary" title="Add Multiple IPs">
+        <i class="bi bi-collection"></i>
+    </a>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+    $(document).ready(function() {
+        // Initial load
+        updateIPs();
+
+        // Auto-refresh every 5 seconds
+        setInterval(updateIPs, 5000);
+
+        let currentFilter = 'all';
+        let searchTerm = '';
+
+        $('#filter-online').on('click', function() {
+            currentFilter = 'online';
+            $(this).addClass('selected-filter').siblings().removeClass('selected-filter');
+            updateIPs(true);
+        });
+
+        $('#filter-offline').on('click', function() {
+            currentFilter = 'offline';
+            $(this).addClass('selected-filter').siblings().removeClass('selected-filter');
+            updateIPs(true);
+        });
+
+        $('#filter-all').on('click', function() {
+            currentFilter = 'all';
+            $(this).addClass('selected-filter').siblings().removeClass('selected-filter');
+            updateIPs(true);
+        });
+
+        $('#ipSearch').on('keyup', function() {
+            searchTerm = $(this).val().toLowerCase();
+            updateIPs(true);
+        });
+
+
+        function updateIPs(isFilterOrSearch = false) {
+            $.get('/get_ips')
+                .done(function(data) {
+                    $('#last-update').text(new Date().toLocaleTimeString());
+
+                    const upCount = data.filter(ip => ip.last_status).length;
+                    const downCount = data.filter(ip => ip.last_status === false).length;
+
+                    if (!isFilterOrSearch) {
+                        $('#up-count').text(upCount);
+                        $('#down-count').text(downCount);
+                        $('#total-count').text(data.length);
+                        $('#filter-all').addClass('selected-filter'); // Highlight 'All' by default on initial load
+                    }
+
+
+                    let filteredData = data;
+
+                    if (currentFilter === 'online') {
+                        filteredData = data.filter(ip => ip.last_status === true);
+                    } else if (currentFilter === 'offline') {
+                        filteredData = data.filter(ip => ip.last_status === false);
+                    }
+
+                    if (searchTerm) {
+                        filteredData = filteredData.filter(ip =>
+                            ip.ip.toLowerCase().includes(searchTerm) ||
+                            ip.description.toLowerCase().includes(searchTerm)
+                        );
+                    }
+
+
+                    const tableBody = $('#ips-table tbody');
+                    tableBody.empty();
+
+                    if (filteredData.length === 0) {
+                        tableBody.append(`<tr><td colspan="6" class="text-center">No IPs to display for this criteria.</td></tr>`);
+                        return;
+                    }
+
+                    $.each(filteredData, function(index, ip) {
+                        const statusClass = ip.last_status ? 'success' : 'danger';
+                        const statusText = ip.last_status ? 'ONLINE' : 'OFFLINE';
+                        const statusIcon = ip.last_status ?
+                            '<i class="bi bi-check-circle-fill text-success"></i>' :
+                            '<i class="bi bi-x-circle-fill text-danger"></i>';
+                        const responseTime = ip.response_time ?
+                            `${ip.response_time.toFixed(2)} ms` : '<span class="text-muted">--</span>';
+
+                        const row = `
+                            <tr>
+                                <td><a href="/ip_detail/${ip.id}" class="text-decoration-none text-dark">${ip.ip}</a></td>
+                                <td>${ip.description}</td>
+                                <td>
+                                    <span class="badge bg-${statusClass}-subtle text-${statusClass}-emphasis">
+                                        ${statusIcon} ${statusText}
+                                    </span>
+                                </td>
+                                <td>${responseTime}</td>
+                                <td>
+                                    ${ip.last_checked ? new Date(ip.last_checked).toLocaleString() : 'Never'}
+                                </td>
+                                <td>
+                                    <a href="/toggle/${ip.id}" class="btn btn-sm ${ip.active ? 'btn-warning' : 'btn-success'}" title="${ip.active ? 'Pause Monitoring' : 'Start Monitoring'}">
+                                        ${ip.active ? '<i class="bi bi-pause"></i>' : '<i class="bi bi-play"></i>'}
+                                    </a>
+                                    <a href="/delete/${ip.id}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this IP?');" title="Delete IP">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        `;
+                        tableBody.append(row);
+                    });
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    console.error('Error fetching IP data:', textStatus, errorThrown);
+                });
+        }
+    });
+    </script>
+</body>
+</html>
